@@ -1,0 +1,9 @@
+{
+  "clang_path": "~/llvm-project/build/bin/clang",
+  "llc_path": "~/llvm-project/build/bin/llc",
+  "llvm_objdump_path": "~/llvm-project/build/bin/llvm-objdump",
+  "riscv_include_path": "/opt/riscv/riscv32-unknown-elf/include",
+  "riscv_gcc": "riscv32-unknown-elf-gcc",
+  "m5ops_object": "m5ops.o",
+  "gem5_path": "~/gem5"
+}

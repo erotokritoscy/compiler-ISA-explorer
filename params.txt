@@ -1,0 +1,4 @@
+-custom-legalize-mul
+-custom-legalize-shl
+-custom-legalize-or
+-custom-legalize-and
