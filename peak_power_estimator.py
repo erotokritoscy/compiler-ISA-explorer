@@ -17,7 +17,7 @@ class PeakPowerEstimator:
             self.parser_script = Path("Gem5McPATParser.py").expanduser()
             self.template_xml = Path("mcpat_template.xml").expanduser()
 
-    def estimate_peak_power(self, m5out_path="m5out"):
+    def estimate_peak_power(self, m5out_path="m5out", parameters=None):
         # Cleanup previous run files
         for f in ["mcpat-in.xml", "mcpat-out.txt"]:
             path = Path(f)
@@ -31,14 +31,21 @@ class PeakPowerEstimator:
         mcpat_output = Path("mcpat-out.txt")
 
         # Step 1: Run Gem5McPATParser.py
+        parser_cmd = [
+            "python3", str(self.parser_script),
+            "--config", str(config_json),
+            "--stats", str(stats_txt),
+            "--template", str(self.template_xml)
+        ]
+
+        # Add override if -custom-legalize-mul is present
+        if parameters and "-custom-legalize-mul" in parameters:
+            parser_cmd += ["--mul-per-core", "0"]
+
+        # Run the parser
         try:
             print("[Power] Generating mcpat-in.xml...")
-            subprocess.run([
-                "python3", str(self.parser_script),
-                "--config", str(config_json),
-                "--stats", str(stats_txt),
-                "--template", str(self.template_xml)
-            ], check=True)
+            subprocess.run(parser_cmd, check=True)
         except subprocess.CalledProcessError:
             print("[Power] Error: McPAT input generation failed.")
             return None

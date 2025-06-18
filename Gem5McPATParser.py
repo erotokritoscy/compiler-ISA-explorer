@@ -48,6 +48,10 @@ def create_parser():
         metavar='PATH',
         help="Output file for McPAT input in XML format (default: mcpat-in.xml)")
 
+    parser.add_argument(
+        '--mul-per-core', type=int, default=1,
+        help="Set the value of MUL_per_core (default: 1)")
+
     return parser
 
 
@@ -316,6 +320,8 @@ def dumpMcpatOut(outFile):
                 param.attrib['value'] = ','.join(exprs)
             else:
                 param.attrib['value'] = str(eval(str(value)))
+        if param.attrib.get('name') == 'MUL_per_core':
+            param.attrib['value'] = str(args.mul_per_core)
 
     # replace stats with values from the GEM5 stats file
     statRe = re.compile(r'stats\.([a-zA-Z0-9_:\.]+)')

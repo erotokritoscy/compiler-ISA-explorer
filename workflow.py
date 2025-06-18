@@ -38,7 +38,7 @@ class Workflow:
             # Always run the simulator to generate m5out
             sim_metrics = self.simulator.simulate(elf_path)
             if target_metric in {"peak power", "total leakage", "peak dynamic"}:
-                metrics = self.peak_power_estimator.estimate_peak_power()
+                metrics = self.peak_power_estimator.estimate_peak_power(parameters=parameters)
                 return metrics.get(target_metric) if metrics else None
             return sim_metrics.get(target_metric)
         else:
