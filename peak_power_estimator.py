@@ -12,7 +12,7 @@ class PeakPowerEstimator:
                 self.parser_script = Path(config.get("mcpat_parser", "Gem5McPATParser.py")).expanduser()
                 self.template_xml = Path(config.get("mcpat_template", "mcpat_template.xml")).expanduser()
         except FileNotFoundError:
-            print("[PeakPower] Warning: config.json not found. Using defaults.")
+            print("[Power] Warning: config.json not found. Using defaults.")
             self.mcpat_path = Path("~/mcpat-calib-public/mcpat").expanduser()
             self.parser_script = Path("Gem5McPATParser.py").expanduser()
             self.template_xml = Path("mcpat_template.xml").expanduser()
@@ -32,7 +32,7 @@ class PeakPowerEstimator:
 
         # Step 1: Run Gem5McPATParser.py
         try:
-            print("[PeakPower] Generating mcpat-in.xml...")
+            print("[Power] Generating mcpat-in.xml...")
             subprocess.run([
                 "python3", str(self.parser_script),
                 "--config", str(config_json),
@@ -40,12 +40,12 @@ class PeakPowerEstimator:
                 "--template", str(self.template_xml)
             ], check=True)
         except subprocess.CalledProcessError:
-            print("[PeakPower] Error: McPAT input generation failed.")
+            print("[Power] Error: McPAT input generation failed.")
             return None
 
         # Step 2: Run McPAT
         try:
-            print("[PeakPower] Running McPAT...")
+            print("[Power] Running McPAT...")
             with mcpat_output.open("w") as f:
                 subprocess.run([
                     str(self.mcpat_path / "mcpat"),
@@ -53,7 +53,7 @@ class PeakPowerEstimator:
                     "-print_level", "1"
                 ], stdout=f, stderr=subprocess.STDOUT, check=True)
         except subprocess.CalledProcessError:
-            print("[PeakPower] Error: McPAT execution failed.")
+            print("[Power] Error: McPAT execution failed.")
             return None
 
         # Step 3: Parse peak power from mcpat-out.txt
@@ -76,15 +76,15 @@ class PeakPowerEstimator:
 
             if results:
                 for k, v in results.items():
-                    print(f"[PeakPower] {k.capitalize()}: {v} W")
+                    print(f"[Power] {k.capitalize()}: {v} W")
                 return results
             else:
-                print("[PeakPower] No valid power entries found in McPAT output.")
+                print("[Power] No valid power entries found in McPAT output.")
                 return None
         except Exception as e:
-            print(f"[PeakPower] Error parsing mcpat-out.txt: {e}")
+            print(f"[Power] Error parsing mcpat-out.txt: {e}")
 
-        print("[PeakPower] Peak Power not found in McPAT output.")
+        print("[Power] Peak Power not found in McPAT output.")
         return None
 
 
