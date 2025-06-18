@@ -5,5 +5,8 @@
   "riscv_include_path": "/opt/riscv/riscv32-unknown-elf/include",
   "riscv_gcc": "riscv32-unknown-elf-gcc",
   "m5ops_object": "m5ops.o",
-  "gem5_path": "~/gem5"
+  "gem5_path": "~/gem5",
+  "mcpat_path": "~/mcpat-calib-public/mcpat",
+  "mcpat_parser": "Gem5McPATParser.py",
+  "mcpat_template": "mcpat_template.xml"
 }

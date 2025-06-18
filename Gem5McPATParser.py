@@ -83,22 +83,32 @@ def parse(source):
 def readStatsFile(statsFile):
     global stats
     stats = {}
-    F = open(statsFile)
+    in_stats_block = False
     ignores = re.compile(r'^---|^$')
     statLine = re.compile(
         r'([a-zA-Z0-9_\.:-]+)\s+([-+]?[0-9]+\.[0-9]+|[-+]?[0-9]+|nan|inf)')
-    count = 0
-    for line in F:
-        # ignore empty lines and lines starting with "---"
-        if not ignores.match(line):
-            count += 1
-            statKind = statLine.match(line).group(1)
-            statValue = statLine.match(line).group(2)
-            if statValue == 'nan':
-                logging.warning("%s is nan. Setting it to 0" % statKind)
-                statValue = '0'
-            stats[statKind] = statValue
-    F.close()
+
+    with open(statsFile, 'r') as F:
+        for line in F:
+            line = line.strip()
+            if "Begin Simulation Statistics" in line:
+                if not in_stats_block:
+                    in_stats_block = True
+                    continue
+                else:
+                    # Skip the second block if it appears
+                    break
+            elif "End Simulation Statistics" in line and in_stats_block:
+                break
+            elif in_stats_block and not ignores.match(line):
+                match = statLine.match(line)
+                if match:
+                    statKind, statValue = match.groups()
+                    if statValue == 'nan':
+                        logging.warning(f"{statKind} is nan. Setting it to 0")
+                        statValue = '0'
+                    stats[statKind] = statValue
+
 
 
 def readConfigFile(configFile):
