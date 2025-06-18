@@ -57,15 +57,30 @@ class PeakPowerEstimator:
             return None
 
         # Step 3: Parse peak power from mcpat-out.txt
+        results = {}
         try:
             with mcpat_output.open("r") as f:
                 for line in f:
                     if "Peak Power" in line:
                         match = re.search(r"Peak Power\s*=\s*([\d\.eE+-]+)", line)
                         if match:
-                            peak_power = float(match.group(1))
-                            print(f"[PeakPower] Peak Power = {peak_power} W")
-                            return peak_power
+                            results["peak power"] = float(match.group(1))
+                    elif "Total Leakage" in line:
+                        match = re.search(r"Total Leakage\s*=\s*([\d\.eE+-]+)", line)
+                        if match:
+                            results["total leakage"] = float(match.group(1))
+                    elif "Peak Dynamic" in line:
+                        match = re.search(r"Peak Dynamic\s*=\s*([\d\.eE+-]+)", line)
+                        if match:
+                            results["peak dynamic"] = float(match.group(1))
+
+            if results:
+                for k, v in results.items():
+                    print(f"[PeakPower] {k.capitalize()}: {v} W")
+                return results
+            else:
+                print("[PeakPower] No valid power entries found in McPAT output.")
+                return None
         except Exception as e:
             print(f"[PeakPower] Error parsing mcpat-out.txt: {e}")
 

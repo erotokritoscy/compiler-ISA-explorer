@@ -8,7 +8,7 @@ if __name__ == "__main__":
 
     c_file = sys.argv[1]
 
-    print("Choose metric to optimize: exec time, code size, CPU area, power, energy, frequency")
+    print("Choose metric to optimize: exec time, code size, CPU area, peak power, total leakage, peak dynamic")
     metric = input("Metric: ").strip()
 
     workflow = Workflow()

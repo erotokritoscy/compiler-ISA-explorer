@@ -20,13 +20,11 @@ int main() {
 
 
   int x = -4;
-  int y = 2;
-  int z = 5;
+  int y = 20;
+  int z = 15;
 
   int mul = x * y;
-  mul = x * y;
-  mul = x * y;
-  mul = x * y;
+
   int mul2 = x * mul;
 
   int shift = x << y;

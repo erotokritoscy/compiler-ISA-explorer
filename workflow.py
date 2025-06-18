@@ -3,6 +3,7 @@ from compiler_frontend import CompilerFrontend
 from cpu_synthesis import CPUSynthesis
 from compiler_backend import ParamCompilerBackend
 from simulator import Simulator
+from peak_power_estimator import PeakPowerEstimator
 
 
 class Workflow:
@@ -11,6 +12,7 @@ class Workflow:
         self.cpu_synthesis = CPUSynthesis()
         self.compiler_backend = ParamCompilerBackend()
         self.simulator = Simulator()
+        self.peak_power_estimator = PeakPowerEstimator()
 
         # Load parameters from file
         try:
@@ -29,11 +31,15 @@ class Workflow:
             _, cpu_metrics = self.cpu_synthesis.synthesize(parameters)
             return cpu_metrics.get(target_metric)
 
-        elif target_metric in {"exec time", "peak power", "energy"}:
+        elif target_metric in {"exec time", "peak power", "total leakage", "peak dynamic"}:
             elf_path, _ = self.compiler_backend.compile(bc_path, parameters)
             if not elf_path:
                 return None
+            # Always run the simulator to generate m5out
             sim_metrics = self.simulator.simulate(elf_path)
+            if target_metric in {"peak power", "total leakage", "peak dynamic"}:
+                metrics = self.peak_power_estimator.estimate_peak_power()
+                return metrics.get(target_metric) if metrics else None
             return sim_metrics.get(target_metric)
         else:
             print(f"[ERROR] Unknown target metric: {target_metric}")
