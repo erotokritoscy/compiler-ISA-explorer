@@ -4,6 +4,8 @@ from cpu_synthesis import CPUSynthesis
 from compiler_backend import ParamCompilerBackend
 from simulator import Simulator
 from peak_power_estimator import PeakPowerEstimator
+from itertools import chain, combinations
+import json
 
 
 class Workflow:
@@ -14,6 +16,13 @@ class Workflow:
         self.simulator = Simulator()
         self.peak_power_estimator = PeakPowerEstimator()
 
+        self.config_path = "config.json"
+
+        # Load config file
+        with open("config.json") as f:
+            config = json.load(f)
+        self.constraints = config.get("constraints", {})
+
         # Load parameters from file
         try:
             with open(param_file, 'r') as f:
@@ -22,28 +31,47 @@ class Workflow:
             print(f"[ERROR] Parameter file '{param_file}' not found.")
             self.possible_parameters = []
 
+    def _violates_constraint(self, metric, value):
+        if value is None:
+            return True
+        key = f"max_{metric.replace(' ', '_')}"
+        limit = self.constraints.get(key)
+        return limit is not None and value > limit
+
     def evaluate(self, bc_path, parameters, target_metric):
-        if target_metric == "code size":
-            _, code_metrics = self.compiler_backend.compile(bc_path, parameters)
-            return code_metrics.get(target_metric)
-
-        elif target_metric in {"CPU area", "power", "frequency"}:
-            _, cpu_metrics = self.cpu_synthesis.synthesize(parameters)
-            return cpu_metrics.get(target_metric)
-
-        elif target_metric in {"exec time", "peak power", "total leakage", "peak dynamic"}:
-            elf_path, _ = self.compiler_backend.compile(bc_path, parameters)
-            if not elf_path:
-                return None
-            # Always run the simulator to generate m5out
-            sim_metrics = self.simulator.simulate(elf_path)
-            if target_metric in {"peak power", "total leakage", "peak dynamic"}:
-                metrics = self.peak_power_estimator.estimate_peak_power(parameters=parameters)
-                return metrics.get(target_metric) if metrics else None
-            return sim_metrics.get(target_metric)
-        else:
-            print(f"[ERROR] Unknown target metric: {target_metric}")
+        # Step 1: Compile
+        elf_path, asm_file = self.compiler_backend.compile(bc_path, parameters)
+        if not elf_path:
             return None
+
+        # Step 2: Simulate
+        sim_metrics = self.simulator.simulate(elf_path)
+
+        # Step 3: Synthesize CPU (if needed)
+        # cpu_area = self.cpu_synthesis.synthesize(parameters)
+
+        # Step 4: Estimate Peak Power (if needed)
+        power_metrics = self.peak_power_estimator.estimate_peak_power(parameters=parameters)
+        peak_power = power_metrics.get("peak power") if power_metrics else None
+
+        # Step 5: Collect metrics
+        metrics = {
+            "exec time": sim_metrics.get("exec time"),
+            "energy": sim_metrics.get("energy"),
+            "code size": asm_file.get("code size"),
+            "CPU area": 1, #cpu_area,
+            "peak power": peak_power
+        }
+
+        # Step 6: Check constraint
+        for metric, value in metrics.items():
+            if self._violates_constraint(metric, value):
+                key = f"max_{metric.replace(' ', '_')}"
+                limit = self.constraints.get(key)
+                print(f"❌ Violates constraint: {metric} = {value:.10f} > max {limit:.10f}")
+                return None
+
+        return metrics.get(target_metric)
 
     def greedy_parameter_search(self, bc_path, target_metric):
         best_parameters = []
@@ -71,9 +99,50 @@ class Workflow:
             else:
                 print(f"❌ Discarding {param}")
 
-        print(f"\nBest parameters: {best_parameters}")
-        print(f"Best {target_metric}: {best_score:.10f}")
+        if best_score is not None:
+            print(f"\n[BruteForce] ✅ Best combination: {best_parameters}")
+            print(f"[BruteForce] ✅ Best {target_metric}: {best_score:.8f}")
+        else:
+            print("\n[BruteForce] ❌ No valid combination found that satisfies constraints.")
         return best_parameters, best_score
+
+    def generate_valid_param_combinations(self, params, conflicts):
+        def is_valid(combo):
+            for conflict in conflicts:
+                if all(p in combo for p in conflict):
+                    return False
+            return True
+
+        all_combos = list(chain.from_iterable(combinations(params, r) for r in range(len(params) + 1)))
+        valid_combos = [list(c) for c in all_combos if is_valid(c)]
+        return valid_combos
+
+    def brute_force_search(self, bc_path, target_metric):
+        print("[BruteForce] Starting brute-force parameter search...")
+        params = self.possible_parameters
+
+        best_score = None
+        best_params = []
+
+        all_combos = self.generate_valid_param_combinations(params, [])
+        print(f"[BruteForce] Trying {len(all_combos)} combinations...")
+
+        for combo in all_combos:
+            trial_score = self.evaluate(bc_path, combo, target_metric)
+            print(f"Trying {combo} => {target_metric}: {trial_score}")
+
+            if trial_score is not None and (best_score is None or trial_score < best_score):
+                best_score = trial_score
+                best_params = combo
+                print(f"✅ New best: {trial_score} with {combo}")
+
+        if best_score is not None:
+            print(f"\n[BruteForce] ✅ Best combination: {best_params}")
+            print(f"[BruteForce] ✅ Best {target_metric}: {best_score:.8f}")
+        else:
+            print("\n[BruteForce] ❌ No valid combination found that satisfies constraints.")
+
+        return best_params, best_score
 
     def run(self, c_file_path, target_metric):
         # Run frontend ONCE to produce output/main.bc
@@ -86,4 +155,6 @@ class Workflow:
         base_name = os.path.splitext(os.path.basename(c_file_path))[0]
         bc_path = os.path.join("output", base_name + ".bc")
 
-        return self.greedy_parameter_search(bc_path, target_metric)
+        # return self.greedy_parameter_search(bc_path, target_metric)
+        return self.brute_force_search(bc_path, target_metric)
+

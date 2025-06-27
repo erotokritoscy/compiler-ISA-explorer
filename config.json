@@ -8,5 +8,10 @@
   "gem5_path": "~/gem5",
   "mcpat_path": "~/mcpat-calib-public/mcpat",
   "mcpat_parser": "Gem5McPATParser.py",
-  "mcpat_template": "mcpat_template.xml"
+  "mcpat_template": "mcpat_template.xml",
+  "constraints": {
+    "max_exec_time": 10,
+    "max_code_size": 2500000,
+    "max_peak_power": 50
+  }
 }

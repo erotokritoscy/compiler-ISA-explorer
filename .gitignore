@@ -4,3 +4,5 @@
 .idea
 /mcpat-in.xml
 /mcpat-out.txt
+__pycache__/workflow.cpython-312.pyc
+__pycache__/peak_power_estimator.cpython-312.pyc
