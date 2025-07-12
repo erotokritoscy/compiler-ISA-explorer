@@ -6,6 +6,9 @@ from simulator import Simulator
 from peak_power_estimator import PeakPowerEstimator
 from itertools import chain, combinations
 import json
+import shutil
+import hashlib
+from pathlib import Path
 
 
 class Workflow:
@@ -48,7 +51,7 @@ class Workflow:
         sim_metrics = self.simulator.simulate(elf_path)
 
         # Step 3: Synthesize CPU (if needed)
-        # cpu_area = self.cpu_synthesis.synthesize(parameters)
+        cpu_area = self.cpu_synthesis.synthesize(parameters)
 
         # Step 4: Estimate Peak Power (if needed)
         power_metrics = self.peak_power_estimator.estimate_peak_power(parameters=parameters)
@@ -59,7 +62,7 @@ class Workflow:
             "exec time": sim_metrics.get("exec time"),
             "energy": sim_metrics.get("energy"),
             "code size": asm_file.get("code size"),
-            "CPU area": 1, #cpu_area,
+            "CPU area": cpu_area,
             "peak power": peak_power
         }
 
@@ -72,6 +75,39 @@ class Workflow:
                 return None
 
         return metrics.get(target_metric)
+
+    def save_result_outputs(self, parameters, base_result_dir="results"):
+        # Generate a unique result folder name based on parameters
+        if not parameters:
+            name = "default"
+        else:
+            hash_suffix = hashlib.md5(" ".join(sorted(parameters)).encode()).hexdigest()[:6]
+            name = "_".join(p.strip("-") for p in parameters) + f"_{hash_suffix}"
+
+        result_path = Path(base_result_dir) / name
+        result_path.mkdir(parents=True, exist_ok=True)
+
+        print(f"[ResultSaver] Saving results to: {result_path}")
+
+        # ✅ Copy only mcpat-in.xml and mcpat-out.txt if they exist
+        for file in ["mcpat-in.xml", "mcpat-out.txt"]:
+            src_file = Path(file)
+            if src_file.exists():
+                shutil.copy(src_file, result_path / src_file.name)
+
+        # ✅ Copy entire directories if they exist
+        dirs_to_copy = {
+            "output": result_path / "output",
+            "m5out": result_path / "m5out",
+            "yosys_out": result_path / "yosys_out"
+        }
+
+        for src_name, dest_path in dirs_to_copy.items():
+            src_path = Path(src_name)
+            if src_path.exists() and src_path.is_dir():
+                shutil.copytree(src_path, dest_path, dirs_exist_ok=True)
+
+        return result_path
 
     def greedy_parameter_search(self, bc_path, target_metric):
         best_parameters = []
@@ -90,6 +126,8 @@ class Workflow:
             if trial_score is None:
                 print(f"[WARNING] Skipping {trial_params} due to backend failure.")
                 continue
+
+            self.save_result_outputs(trial_params)
 
             print(f"Trying {trial_params} => {target_metric}: {trial_score:.10f}")
             if trial_score < best_score:
@@ -131,10 +169,13 @@ class Workflow:
             trial_score = self.evaluate(bc_path, combo, target_metric)
             print(f"Trying {combo} => {target_metric}: {trial_score}")
 
-            if trial_score is not None and (best_score is None or trial_score < best_score):
-                best_score = trial_score
-                best_params = combo
-                print(f"✅ New best: {trial_score} with {combo}")
+            if trial_score is not None:
+                self.save_result_outputs(combo)
+
+                if best_score is None or trial_score < best_score:
+                    best_score = trial_score
+                    best_params = combo
+                    print(f"✅ New best: {trial_score} with {combo}")
 
         if best_score is not None:
             print(f"\n[BruteForce] ✅ Best combination: {best_params}")
@@ -145,6 +186,11 @@ class Workflow:
         return best_params, best_score
 
     def run(self, c_file_path, target_metric):
+        results_dir = "results"
+        if os.path.exists(results_dir):
+            print("[Workflow] Clearing previous results...")
+            shutil.rmtree(results_dir)
+
         # Run frontend ONCE to produce output/main.bc
         success = self.compiler_frontend.compile(c_file_path)
         if not success:
@@ -157,4 +203,3 @@ class Workflow:
 
         # return self.greedy_parameter_search(bc_path, target_metric)
         return self.brute_force_search(bc_path, target_metric)
-
