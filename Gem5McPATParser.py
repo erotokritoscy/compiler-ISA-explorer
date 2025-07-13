@@ -109,7 +109,7 @@ def readStatsFile(statsFile):
                 if match:
                     statKind, statValue = match.groups()
                     if statValue == 'nan':
-                        logging.warning(f"{statKind} is nan. Setting it to 0")
+                        # logging.warning(f"{statKind} is nan. Setting it to 0")
                         statValue = '0'
                     stats[statKind] = statValue
 

@@ -6,6 +6,7 @@
   "riscv_gcc": "riscv32-unknown-elf-gcc",
   "m5ops_object": "m5ops.o",
   "gem5_path": "~/gem5",
+  "gem5_script": "configs/learning_gem5/part1/riscv_two_level.py",
   "mcpat_path": "~/mcpat-calib-public/mcpat",
   "mcpat_parser": "Gem5McPATParser.py",
   "mcpat_template": "mcpat_template.xml",

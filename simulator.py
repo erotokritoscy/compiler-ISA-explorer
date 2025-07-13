@@ -8,9 +8,11 @@ class Simulator:
             with open(config_path, "r") as f:
                 config = json.load(f)
                 self.gem5_path = Path(config.get("gem5_path", "~/gem5")).expanduser()
+                self.gem5_script = config.get("gem5_script", "configs/learning_gem5/part1/riscv_two_level.py")
         except FileNotFoundError:
             print("[ERROR] config.json not found. Using default gem5 path.")
             self.gem5_path = Path("~/gem5").expanduser()
+            self.gem5_script = "configs/learning_gem5/part1/riscv_two_level.py"
 
     def run_simulation(self, elf_path):
         output_dir = Path("output")
@@ -21,7 +23,7 @@ class Simulator:
 
             subprocess.run([
                 str(self.gem5_path / "build/RISCV/gem5.opt"),
-                str(self.gem5_path / "configs/learning_gem5/part1/my-simple-riscv.py"),
+                str(self.gem5_path / self.gem5_script),
                 str(elf_path)
             ], check=True)
 
