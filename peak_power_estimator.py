@@ -72,14 +72,14 @@ class PeakPowerEstimator:
                         match = re.search(r"Peak Power\s*=\s*([\d\.eE+-]+)", line)
                         if match:
                             results["peak power"] = float(match.group(1))
-                    elif "Total Leakage" in line:
-                        match = re.search(r"Total Leakage\s*=\s*([\d\.eE+-]+)", line)
-                        if match:
-                            results["total leakage"] = float(match.group(1))
-                    elif "Peak Dynamic" in line:
-                        match = re.search(r"Peak Dynamic\s*=\s*([\d\.eE+-]+)", line)
-                        if match:
-                            results["peak dynamic"] = float(match.group(1))
+                    # elif "Total Leakage" in line:
+                    #     match = re.search(r"Total Leakage\s*=\s*([\d\.eE+-]+)", line)
+                    #     if match:
+                    #         results["total leakage"] = float(match.group(1))
+                    # elif "Peak Dynamic" in line:
+                    #     match = re.search(r"Peak Dynamic\s*=\s*([\d\.eE+-]+)", line)
+                    #     if match:
+                    #         results["peak dynamic"] = float(match.group(1))
 
             if results:
                 for k, v in results.items():

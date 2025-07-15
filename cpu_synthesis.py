@@ -129,7 +129,6 @@ class CPUSynthesis:
             # print(json.dumps(design, indent=2))
 
             result = {
-                "CPU area": int(design.get("num_cells", 0)),
                 "num_wires": int(design.get("num_wires", 0)),
                 "num_cells": int(design.get("num_cells", 0))
             }

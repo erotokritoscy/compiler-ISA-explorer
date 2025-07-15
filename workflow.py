@@ -52,7 +52,8 @@ class Workflow:
         sim_metrics = self.simulator.simulate(elf_path)
 
         # Step 3: Synthesize CPU (if needed)
-        cpu_area = self.cpu_synthesis.synthesize(parameters)
+        _, synthesize_results = self.cpu_synthesis.synthesize(parameters)
+        cpu_area = synthesize_results.get("num_cells", None)
 
         # Step 4: Estimate Peak Power (if needed)
         power_metrics = self.peak_power_estimator.estimate_peak_power(parameters=parameters)

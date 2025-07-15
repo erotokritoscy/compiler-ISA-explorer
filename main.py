@@ -9,10 +9,10 @@ if __name__ == "__main__":
     c_file = sys.argv[1]
 
     valid_metrics = {
-        "exec time", "code size", "CPU area", "peak power", "total leakage", "peak dynamic", "energy"
+        "exec time", "code size", "CPU area", "peak power", "energy"
     }
 
-    print("Choose metric to optimize: exec time, code size, CPU area, peak power, total leakage, peak dynamic, energy")
+    print("Choose metric to optimize: exec time, code size, CPU area, peak power, energy")
     metric = input("Metric: ").strip()
 
     if metric not in valid_metrics:

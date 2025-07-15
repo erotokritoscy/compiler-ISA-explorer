@@ -34,51 +34,72 @@ class EnergyCalculator:
     def __init__(self, data_in):
         self.debug = False
         self.name = 'mcpat:energy_calculator'
-        buf = open(data_in)
-        self.root = parse_node('root', None, -1)
-        trunk = [self.root]
+        print(f"[EnergyCalculator] Loading McPAT output: {data_in}")
 
-        for line in buf:
-            indent = len(line) - len(line.lstrip())
-            equal = '=' in line
-            colon = ':' in line
-            useless = not equal and not colon
-            items = list(map(lambda x: x.strip(), line.split('=')))
+        try:
+            with open(data_in) as buf:
+                self.root = parse_node('root', None, -1)
+                trunk = [self.root]
 
-            branch = trunk[-1]
+                for line in buf:
+                    indent = len(line) - len(line.lstrip())
+                    equal = '=' in line
+                    colon = ':' in line
+                    useless = not equal and not colon
+                    items = list(map(lambda x: x.strip(), line.split('=')))
 
-            if useless:
-                pass
-            elif equal:
-                if len(items) > 1:
-                    n = parse_node(key=items[0], value=items[1], indent=indent)
-                    branch.append(n)
-            else:
-                while indent <= branch.indent:
-                    trunk.pop()
                     branch = trunk[-1]
-                n = parse_node(key=items[0], value=None, indent=indent)
-                branch.append(n)
-                trunk.append(n)
+
+                    if useless:
+                        continue
+                    elif equal:
+                        if len(items) > 1:
+                            n = parse_node(key=items[0], value=items[1], indent=indent)
+                            branch.append(n)
+                            if self.debug:
+                                print(f"[EnergyCalculator] Parsed leaf: {n}")
+                    else:
+                        while indent <= branch.indent:
+                            trunk.pop()
+                            branch = trunk[-1]
+                        n = parse_node(key=items[0], value=None, indent=indent)
+                        branch.append(n)
+                        trunk.append(n)
+                        if self.debug:
+                            print(f"[EnergyCalculator] Parsed node: {n}")
+
+            print("[EnergyCalculator] Tree parsing complete.")
+
+        except Exception as e:
+            print(f"[EnergyCalculator] ❌ Failed to load file: {e}")
+            raise
 
     def get_tree(self):
         return self.root.get_tree(0)
 
     def getValue(self, key_list):
+        full_key = ' -> '.join(key_list)
         value = self.root.getValue(['root'] + key_list)
         if value == '':
-            raise ValueError("Value not found for key path: " + ' -> '.join(key_list))
+            raise ValueError(f"[EnergyCalculator] ❌ Value not found for key path: {full_key}")
         return value
 
     def getEnergy(self, runtime_seconds):
+        print(f"[EnergyCalculator] Estimating energy with runtime: {runtime_seconds:.8f} s")
+
         leakage = self.getValue(['Processor:', 'Total Leakage'])
         dynamic = self.getValue(['Processor:', 'Runtime Dynamic'])
 
         leakage = float(re.sub(' W', '', leakage))
         dynamic = float(re.sub(' W', '', dynamic))
 
+        print(f"[EnergyCalculator] Total Leakage: {leakage} W")
+        print(f"[EnergyCalculator] Runtime Dynamic: {dynamic} W")
+
         energy_joules = (leakage + dynamic) * runtime_seconds
-        return energy_joules  # in Joules
+
+        print(f"[EnergyCalculator] Estimated Energy: {energy_joules:.6f} Joules")
+        return energy_joules
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
