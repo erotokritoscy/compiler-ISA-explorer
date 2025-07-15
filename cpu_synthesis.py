@@ -5,18 +5,57 @@ import shutil
 import json
 import re
 from pathlib import Path
+import hashlib
 
 
 class CPUSynthesis:
-    def __init__(self):
+    def __init__(self, config_path="config.json"):
         home = Path.home()
         self.core_dir = home / "riscv_core/core/custom"
         self.output_dir = Path("yosys_out")
         self.cpu_json = self.output_dir / "cpu.json"
         self.cpu_stats_json = self.output_dir / "cpu_stats.json"
         self.yosys_log = self.output_dir / "yosys_log.txt"
+        self.cache_file = self.output_dir / "yosys_cache.json"
+        self.use_cache = True
+
+        try:
+            with open(config_path, "r") as f:
+                config = json.load(f)
+                self.use_cache = config.get("yosys_cache", True)
+        except Exception as e:
+            print(f"[CPUSynthesis] Warning: failed to read config.json: {e}")
+
+        if self.use_cache:
+            self.cache = self._load_cache()
+
+    def _load_cache(self):
+        if self.cache_file.exists():
+            try:
+                with open(self.cache_file, "r") as f:
+                    return json.load(f)
+            except Exception:
+                return {}
+        return {}
+
+    def _save_cache(self):
+        try:
+            with open(self.cache_file, "w") as f:
+                json.dump(self.cache, f, indent=2)
+        except Exception as e:
+            print(f"[CPUSynthesis] Failed to save cache: {e}")
+
+    def _make_key(self, parameters):
+        key_src = " ".join(sorted(parameters)) if parameters else "default"
+        return hashlib.md5(key_src.encode()).hexdigest()
 
     def synthesize(self, parameters=None):
+        # Generate cache key
+        cache_key = self._make_key(parameters)
+        if self.use_cache and cache_key in self.cache:
+            print("[CPUSynthesis] Using cached synthesis results.")
+            return "RTL", self.cache[cache_key]
+
         # Step 1: Check core path
         if not self.core_dir.is_dir():
             print(f"[CPUSynthesis] Error: RISC-V core directory '{self.core_dir}' not found.")
@@ -89,11 +128,18 @@ class CPUSynthesis:
             # Optional: debug print
             # print(json.dumps(design, indent=2))
 
-            return "RTL", {
+            result = {
                 "CPU area": int(design.get("num_cells", 0)),
                 "num_wires": int(design.get("num_wires", 0)),
                 "num_cells": int(design.get("num_cells", 0))
             }
+
+            # Step 9: Save to cache
+            if self.use_cache:
+                self.cache[cache_key] = result
+                self._save_cache()
+
+            return "RTL", result
 
         except Exception as e:
             print(f"[CPUSynthesis] Exception occurred: {e}")

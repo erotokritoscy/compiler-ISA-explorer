@@ -14,5 +14,6 @@
     "max_exec_time": 10,
     "max_code_size": 2500000,
     "max_peak_power": 50
-  }
+  },
+  "yosys_cache": true
 }

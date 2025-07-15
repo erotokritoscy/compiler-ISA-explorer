@@ -9,6 +9,7 @@ import json
 import shutil
 import hashlib
 from pathlib import Path
+from energy_calculator import EnergyCalculator
 
 
 class Workflow:
@@ -57,10 +58,22 @@ class Workflow:
         power_metrics = self.peak_power_estimator.estimate_peak_power(parameters=parameters)
         peak_power = power_metrics.get("peak power") if power_metrics else None
 
+        # Estimate Energy (using EnergyCalculator with runtime)
+        exec_time = sim_metrics.get("exec time")
+        energy = None
+
+        mcpat_out_path = "mcpat-out.txt"
+        if exec_time is not None and os.path.exists(mcpat_out_path):
+            try:
+                calc = EnergyCalculator(mcpat_out_path)
+                energy = calc.getEnergy(float(exec_time))
+            except Exception as e:
+                print(f"[EnergyCalc] ⚠️ Failed to estimate energy: {e}")
+
         # Step 5: Collect metrics
         metrics = {
             "exec time": sim_metrics.get("exec time"),
-            "energy": sim_metrics.get("energy"),
+            "energy": energy,
             "code size": asm_file.get("code size"),
             "CPU area": cpu_area,
             "peak power": peak_power
