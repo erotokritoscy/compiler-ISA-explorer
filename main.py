@@ -1,5 +1,6 @@
 import sys
 from workflow import Workflow
+import charts
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -22,3 +23,5 @@ if __name__ == "__main__":
 
     workflow = Workflow()
     params, score = workflow.run(c_file, metric)
+
+    charts.generate_chart(c_file)
