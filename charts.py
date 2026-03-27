@@ -1,5 +1,13 @@
+import re
 import pandas as pd
 import matplotlib.pyplot as plt
+
+
+def sanitize_filename(s):
+    s = s.lower()
+    s = re.sub(r"[^\w\s-]", "", s)  # remove special chars
+    s = re.sub(r"\s+", "_", s.strip())  # replace spaces with _
+    return s
 
 
 def generate_chart(title):
@@ -10,13 +18,15 @@ def generate_chart(title):
     df["exec time (µs)"] = df["exec time"] * 1e6
     df["energy (µJ)"] = df["energy"] * 1e6
     df["peak power (mW)"] = df["peak power"] * 1e3
+    df["code size (bytes)"] = df["code size"]
+    df["CPU area (cells)"] = df["CPU area"]
 
     metrics = [
         "exec time (µs)",
         "energy (µJ)",
         "peak power (mW)",
-        "code size",
-        "CPU area",
+        "code size (bytes)",
+        "CPU area (cells)",
     ]
 
     default_vals = df[df["params"] == "default"].iloc[0][metrics]
@@ -33,6 +43,8 @@ def generate_chart(title):
 
     best_params = {m: df.loc[df[m].idxmin(), "params"] for m in metrics}
 
+    safe_title = sanitize_filename(title)
+
     # ---- Global font sizes ----
     plt.rcParams.update(
         {
@@ -46,37 +58,47 @@ def generate_chart(title):
         }
     )
 
-    # ---- Figure + layout ----
-    fig = plt.figure(figsize=(17, 15))
-    gs = fig.add_gridspec(2, 1, height_ratios=[3, 1.4])
+    def fmt_value(metric, val):
+        return f"{val:.6g}"
 
-    ax = fig.add_subplot(gs[0])
-    ax_table = fig.add_subplot(gs[1])
+    # =========================================================
+    # 1. BAR CHART ONLY
+    # =========================================================
+    fig_chart, ax = plt.subplots(figsize=(17, 10))
 
-    # ---- Bar chart ----
     plot_df.plot(kind="bar", log=True, ax=ax)
     ax.set_title(title)
     ax.set_xticklabels(metrics, rotation=45, ha="right")
     ax.legend(title="Configuration")
 
-    def fmt_value(metric, val):
-        return f"{val:.6g}"
-
     for container in ax.containers:
         for bar, val in zip(container, container.datavalues):
-            idx = int(round(bar.get_x() + bar.get_width() / 2))
-            metric = plot_df.index[idx]
+            x_center = bar.get_x() + bar.get_width() / 2
+            metric_idx = int(round(x_center))
+            metric_idx = max(0, min(metric_idx, len(plot_df.index) - 1))
+
             ax.text(
-                bar.get_x() + bar.get_width() / 2,
+                x_center,
                 bar.get_height(),
-                fmt_value(metric, val),
+                fmt_value(plot_df.index[metric_idx], val),
                 rotation=30,
                 ha="center",
                 va="bottom",
                 fontsize=16,
             )
 
-    # ---- Table ----
+    plt.tight_layout()
+
+    chart_png_path = f"results/{safe_title}_chart.png"
+    chart_pdf_path = f"results/{safe_title}_chart.pdf"
+    fig_chart.savefig(chart_png_path, dpi=300, bbox_inches="tight")
+    fig_chart.savefig(chart_pdf_path, bbox_inches="tight")
+    plt.close(fig_chart)
+
+    # =========================================================
+    # 2. TABLE ONLY
+    # =========================================================
+    fig_table, ax_table = plt.subplots(figsize=(17, 4.5))
     ax_table.axis("off")
 
     table_data = [[m, best_params[m]] for m in metrics]
@@ -91,7 +113,6 @@ def generate_chart(title):
     table.auto_set_font_size(False)
     table.set_fontsize(16)
 
-    # Enable text wrapping and proper row height
     for (_, _), cell in table.get_celld().items():
         cell.get_text().set_wrap(True)
 
@@ -99,12 +120,13 @@ def generate_chart(title):
         for col in range(2):
             table[(row, col)].set_height(0.18)
 
-    # ax_table.set_title("Best Parameter Combination per Metric", fontsize=20)
     plt.tight_layout()
 
-    # ---- Save ----
-    png_path = "results/default_vs_best_3bars.png"
-    pdf_path = "results/default_vs_best_3bars.pdf"
-    plt.savefig(png_path, dpi=300, bbox_inches="tight")
-    plt.savefig(pdf_path, bbox_inches="tight")
-    plt.close()
+    table_png_path = f"results/{safe_title}_table.png"
+    table_pdf_path = f"results/{safe_title}_table.pdf"
+    fig_table.savefig(table_png_path, dpi=300, bbox_inches="tight")
+    fig_table.savefig(table_pdf_path, bbox_inches="tight")
+    plt.close(fig_table)
+
+
+generate_chart("Default vs Best Configuration")
