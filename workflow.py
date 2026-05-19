@@ -47,6 +47,7 @@ class Workflow:
             return True
         key = f"max_{metric.replace(' ', '_')}"
         limit = self.constraints.get(key)
+        print(f"[Constraint Check] {metric} = {value:.10f} vs limit {limit} (key: {key})")
         return limit is not None and value > limit
 
     # ----------------------------------------------------------

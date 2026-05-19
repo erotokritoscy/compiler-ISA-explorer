@@ -11,9 +11,10 @@
   "mcpat_parser": "Gem5McPATParser.py",
   "mcpat_template": "mcpat_template.xml",
   "constraints": {
-    "max_exec_time": 10,
-    "max_code_size": 2500000,
-    "max_peak_power": 50
+    "max_exec_time": 1,
+    "max_code_size": 10000,
+    "max_energy": 0.001,
+    "max_CPU_area": 30000
   },
   "yosys_cache": true
 }
